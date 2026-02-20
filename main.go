@@ -61,13 +61,10 @@ func main() {
 }
 
 func getMembers(forceRefresh bool) ([]Member, error) {
-	cachePath, err := getCachePath()
-	if err != nil {
-		return nil, fmt.Errorf("determining cache path: %w", err)
-	}
+	cachePath, cachePathErr := getCachePath()
 
-	// Try to use cache if not forcing refresh
-	if !forceRefresh {
+	// Try to use cache if not forcing refresh and cache path is available
+	if cachePathErr == nil && !forceRefresh {
 		members, err := readCache(cachePath)
 		if err == nil {
 			return members, nil
@@ -79,8 +76,10 @@ func getMembers(forceRefresh bool) ([]Member, error) {
 	members, err := fetchFromGitLab()
 	if err == nil {
 		// Write cache (best effort)
-		if writeErr := writeCache(cachePath, members); writeErr != nil {
-			fmt.Fprintf(os.Stderr, "warning: could not write cache: %v\n", writeErr)
+		if cachePathErr == nil {
+			if writeErr := writeCache(cachePath, members); writeErr != nil {
+				fmt.Fprintf(os.Stderr, "warning: could not write cache: %v\n", writeErr)
+			}
 		}
 		return members, nil
 	}
@@ -88,15 +87,23 @@ func getMembers(forceRefresh bool) ([]Member, error) {
 	fmt.Fprintf(os.Stderr, "warning: GitLab API failed: %v\n", err)
 
 	// Try stale cache
-	members, staleErr := readCacheIgnoreTTL(cachePath)
-	if staleErr == nil {
-		fmt.Fprintf(os.Stderr, "warning: using stale cache\n")
-		return members, nil
+	if cachePathErr == nil {
+		members, staleErr := readCacheIgnoreTTL(cachePath)
+		if staleErr == nil {
+			fmt.Fprintf(os.Stderr, "warning: using stale cache\n")
+			return members, nil
+		}
 	}
 
 	// Last resort: git log
 	fmt.Fprintf(os.Stderr, "warning: falling back to git log contributors (no GitLab usernames available)\n")
-	return fetchFromGitLog()
+	members, gitLogErr := fetchFromGitLog()
+	if gitLogErr != nil {
+		fmt.Fprintf(os.Stderr, "warning: git log failed: %v\n", gitLogErr)
+		return []Member{}, nil
+	}
+
+	return members, nil
 }
 
 func getRemoteURL() (string, error) {
