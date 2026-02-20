@@ -1,31 +1,49 @@
 {
   inputs = {
     nixpkgs.url = "nixpkgs";
-    utils.url = "github:numtide/flake-utils";
   };
 
   outputs =
-    {
-      self,
-      nixpkgs,
-      utils,
-    }:
-    utils.lib.eachDefaultSystem (
-      system:
-      let
-        pkgs = import nixpkgs { inherit system; };
-      in
-      {
-        packages.default = pkgs.buildGoModule {
+    { self, nixpkgs, ... }:
+    let
+      systems = [ "x86_64-linux" ];
+      forAllSystems = nixpkgs.lib.genAttrs systems;
+      nixpkgsFor = forAllSystems (
+        system:
+        import nixpkgs {
+          inherit system;
+          overlays = [ self.overlays.default ];
+        }
+      );
+
+      gitlab-reviewer =
+        { buildGoModule }:
+        buildGoModule {
           pname = "gitlab-reviewer";
           version = "0.1.0";
           src = ./.;
           vendorHash = null;
         };
+    in
+    {
+      overlays.default = final: prev: {
+        gitlab-reviewer = final.callPackage gitlab-reviewer { };
+      };
 
-        devShells.default = pkgs.mkShell {
-          packages = [ pkgs.go ];
-        };
-      }
-    );
+      packages = forAllSystems (system: {
+        default = nixpkgsFor.${system}.gitlab-reviewer;
+      });
+
+      devShells = forAllSystems (
+        system:
+        let
+          pkgs = nixpkgsFor.${system};
+        in
+        {
+          default = pkgs.mkShell {
+            packages = [ pkgs.go ];
+          };
+        }
+      );
+    };
 }
