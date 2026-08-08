@@ -34,6 +34,12 @@
         default = nixpkgsFor.${system}.gitlab-reviewer;
       });
 
+      # buildGoModule's checkPhase runs `go test ./...`, so building the
+      # package covers both the build and the test suite.
+      checks = forAllSystems (system: {
+        default = self.packages.${system}.default;
+      });
+
       devShells = forAllSystems (
         system:
         let
