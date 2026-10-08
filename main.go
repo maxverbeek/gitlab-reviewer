@@ -163,26 +163,6 @@ func parseGitLabRemote(remoteURL string) (*gitlabProject, error) {
 	return nil, fmt.Errorf("could not parse remote URL: %s", remoteURL)
 }
 
-// readPAT reads the GitLab personal access token from ~/.gitlab_pat.
-func readPAT() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("could not determine home directory: %w", err)
-	}
-
-	data, err := os.ReadFile(filepath.Join(home, ".gitlab_pat"))
-	if err != nil {
-		return "", fmt.Errorf("could not read ~/.gitlab_pat: %w", err)
-	}
-
-	token := strings.TrimSpace(string(data))
-	if token == "" {
-		return "", fmt.Errorf("~/.gitlab_pat is empty")
-	}
-
-	return token, nil
-}
-
 func readCache(path string) ([]Member, error) {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -239,7 +219,7 @@ func fetchFromGitLab() ([]Member, error) {
 		return nil, err
 	}
 
-	token, err := readPAT()
+	token, err := readPAT(project.Host)
 	if err != nil {
 		return nil, err
 	}

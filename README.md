@@ -7,7 +7,7 @@ or other selectors to pick a merge request reviewer.
 ## How it works
 
 1. Detects the GitLab project from the `origin` remote (SSH or HTTPS).
-2. Fetches project members from the GitLab API using a personal access token.
+2. Fetches project members from the GitLab API using a personal access token from the Secret Service.
 3. Caches results for 24 hours (in `~/.cache/gitlab-reviewer/`).
 4. Falls back to stale cache, then `git log` contributors if the API is unavailable.
 
@@ -15,14 +15,17 @@ or other selectors to pick a merge request reviewer.
 
 ### GitLab personal access token
 
-Create a file `~/.gitlab_pat` containing a
+Store a
 [GitLab personal access token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html)
-with `read_api` scope:
+with `read_api` scope in the freedesktop Secret Service (default collection),
+with attributes `service=gitlab` and `host=<gitlab host>`:
 
 ```sh
-echo "glpat-xxxxxxxxxxxxxxxxxxxx" > ~/.gitlab_pat
-chmod 600 ~/.gitlab_pat
+secret-tool store --label="GitLab PAT" service gitlab host gitlab.com
 ```
+
+The item must match those attributes exactly (an extra `xdg:schema` is
+tolerated). The tool only reads it; a missing or duplicate item is an error.
 
 ### Install with Nix
 

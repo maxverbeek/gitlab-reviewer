@@ -22,7 +22,7 @@
           pname = "gitlab-reviewer";
           version = "0.1.0";
           src = ./.;
-          vendorHash = null;
+          vendorHash = "sha256-Ac63bZlBvCrhS7b8mk7aJdApI8UGtJxnZG35L37roGY=";
         };
     in
     {
